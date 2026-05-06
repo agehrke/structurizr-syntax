@@ -1,0 +1,188 @@
+%YAML 1.2
+---
+# Sublime Text syntax definition for the Structurizr DSL
+# Reference: https://docs.structurizr.com/dsl/language
+name: Structurizr DSL
+file_extensions:
+  - dsl
+  - structurizr
+scope: source.structurizr
+
+variables:
+  # Identifiers may contain dots (hierarchical refs) and hyphens.
+  # Hyphens must be followed by an identifier char so we don't eat into `->` / `-/>`.
+  identifier: '[A-Za-z_][A-Za-z0-9_.]*(?:-[A-Za-z0-9_.]+)*'
+  hex_color: '#[0-9A-Fa-f]{3,8}\b'
+
+contexts:
+  main:
+    - include: comments
+    - include: directives
+    - include: assignment
+    - include: relationship-operators
+    - include: keywords
+    - include: braces
+    - include: strings
+    - include: hex-colors
+    - include: numbers
+    - include: constants
+    - include: identifiers
+
+  comments:
+    - match: '//.*$'
+      scope: comment.line.double-slash.structurizr
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.structurizr
+      push:
+        - meta_scope: comment.block.structurizr
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.structurizr
+          pop: true
+    # `#` introduces a line comment, but only when it isn't a hex color.
+    - match: '#(?![0-9A-Fa-f]{3,8}\b).*$'
+      scope: comment.line.number-sign.structurizr
+
+  hex-colors:
+    - match: '{{hex_color}}'
+      scope: constant.other.color.rgb-value.structurizr
+
+  strings:
+    # Triple-quoted (heredoc-style) strings — must come before the single-quote variant.
+    - match: '"""'
+      scope: punctuation.definition.string.begin.structurizr
+      push:
+        - meta_scope: string.quoted.triple.structurizr
+        - match: '"""'
+          scope: punctuation.definition.string.end.structurizr
+          pop: true
+        - include: string-interpolation
+    - match: '"'
+      scope: punctuation.definition.string.begin.structurizr
+      push:
+        - meta_scope: string.quoted.double.structurizr
+        - match: '"'
+          scope: punctuation.definition.string.end.structurizr
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.structurizr
+        - include: string-interpolation
+
+  string-interpolation:
+    - match: '\$\{'
+      scope: punctuation.definition.template-expression.begin.structurizr
+      push:
+        - meta_scope: meta.interpolation.structurizr
+        - clear_scopes: 1
+        - match: '\}'
+          scope: punctuation.definition.template-expression.end.structurizr
+          pop: true
+        - match: '{{identifier}}'
+          scope: variable.other.structurizr
+
+  numbers:
+    - match: '\b\d+(\.\d+)?\b'
+      scope: constant.numeric.structurizr
+
+  braces:
+    - match: '\{'
+      scope: punctuation.section.block.begin.structurizr
+    - match: '\}'
+      scope: punctuation.section.block.end.structurizr
+
+  relationship-operators:
+    - match: '-/>'
+      scope: keyword.operator.relationship.remove.structurizr
+    - match: '->'
+      scope: keyword.operator.relationship.structurizr
+
+  assignment:
+    # `identifier =` creates a named element/relationship reference.
+    - match: '({{identifier}})\s*(=)'
+      captures:
+        1: variable.other.assignment.structurizr
+        2: keyword.operator.assignment.structurizr
+
+  directives:
+    # Bang-prefixed directives. Match the longest names first.
+    - match: '!(impliedRelationships|identifiers|relationships|relationship|components|decisions|elements|element|extend|include|plugin|script|const|docs|adrs|var|ref)\b'
+      scope: keyword.control.directive.structurizr
+
+  keywords:
+    # Structurizr DSL keywords are case-insensitive, so all matches use (?i:...).
+
+    # Top-level workspace structure.
+    - match: \b(?i:workspace|model|views|configuration|styles|branding|terminology|themes|theme|properties|perspectives|archetypes|users)\b
+      scope: keyword.control.structurizr
+
+    # Model elements.
+    - match: \b(?i:person|softwareSystem|container|component|group|element)\b
+      scope: storage.type.element.structurizr
+
+    # Deployment elements.
+    - match: \b(?i:deploymentEnvironment|deploymentNode|deploymentGroup|infrastructureNode|softwareSystemInstance|containerInstance|instanceOf|healthCheck)\b
+      scope: storage.type.deployment.structurizr
+
+    # View types.
+    - match: \b(?i:systemLandscape|systemContext|filtered|deployment|dynamic|custom|image)\b
+      scope: support.function.view.structurizr
+
+    # View operations.
+    - match: \b(?i:include|exclude|autoLayout|animation|default|title)\b
+      scope: support.function.view-operation.structurizr
+
+    # Embedded image-view renderers.
+    - match: \b(?i:plantuml|mermaid|kroki)\b
+      scope: support.function.renderer.structurizr
+
+    # Element/relationship attributes.
+    - match: \b(?i:description|technology|tags|tag|url|instances|relationship)\b
+      scope: variable.parameter.structurizr
+
+    # Style attributes.
+    - match: \b(?i:shape|icon|background|color|colour|stroke|strokeWidth|fontSize|border|opacity|thickness|routing|style|position|metadata|width|height|light|dark)\b
+      scope: variable.parameter.style.structurizr
+
+    # Configuration / access control.
+    - match: \b(?i:scope|visibility)\b
+      scope: variable.parameter.config.structurizr
+
+  constants:
+    # Shape names that appear unquoted as style values. Case-insensitive.
+    - match: \b(?i:Box|RoundedBox|Circle|Ellipse|Hexagon|Cylinder|Pipe|Person|Robot|Folder|WebBrowser|MobileDevicePortrait|MobileDeviceLandscape|Component|Bucket|Shell)\b
+      scope: support.constant.shape.structurizr
+
+    # autoLayout direction values.
+    - match: \b(?i:tb|bt|lr|rl)\b
+      scope: support.constant.direction.structurizr
+
+    # Border / line style values.
+    - match: \b(?i:solid|dashed|dotted)\b
+      scope: support.constant.line-style.structurizr
+
+    # Routing values.
+    - match: \b(?i:Direct|Orthogonal|Curved)\b
+      scope: support.constant.routing.structurizr
+
+    # Visibility / scope values.
+    - match: \b(?i:private|public|landscape|softwaresystem|none)\b
+      scope: support.constant.access.structurizr
+
+    # Property values that act like enums (e.g. inspection rules).
+    - match: \b(?i:ignore|warning|error|hierarchical|flat)\b
+      scope: support.constant.value.structurizr
+
+    # Boolean-ish values used by various properties.
+    - match: \b(?i:true|false|yes|no)\b
+      scope: constant.language.boolean.structurizr
+
+    # Reference to the current element.
+    - match: \b(?i:this|extends)\b
+      scope: variable.language.structurizr
+
+    # Wildcard used in include/exclude expressions.
+    - match: '\*'
+      scope: constant.other.wildcard.structurizr
+
+  identifiers:
+    - match: '{{identifier}}'
+      scope: variable.other.structurizr
